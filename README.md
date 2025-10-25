@@ -4,11 +4,9 @@ An experimental FPS game inspired by the classics of Halo CE and Halo 2. This is
 
 To be blunt, Multiplayer is complicated. But that's for later! This game is planned to follow similar beats to the original CE/2 stories to some degree. But it will keep our original charm. ✨
 
-# Wait, C?
+# Wait, C **and** C++?
 
-C. Not C++, not C#, not some partially mainstream language like Rust. Good old, infinitely reliable, eternally present... C. This sounds *insane* considering we are actively building and maintaining a C++ framework, but that's part of the charm. This project lives in its own little ecosystem of C and questionable uses of undefined behavior. Will this come back to haunt us years down the line? I sure hope it won't!
-
-To be more accurate: it's a creative challenge, a return to form, in a way. It's about **absolute control**, making something new and fresh with a language that's been around since the early 1970s.
+Correct! One of our primary dependencies is [Dear ImGui]() which is written mostly in C++. To avoid extra dependencies, we just use both languages. There's still mostly **C** present in the codebase, but interactions with imgui usually happen in **C++** files.
 
 ## Where are the Assets?
 
