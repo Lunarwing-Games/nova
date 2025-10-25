@@ -13,7 +13,7 @@
 cmake_minimum_required(VERSION 3.20)
 project(nova
     VERSION 0.1.0
-    LANGUAGES C
+    LANGUAGES C CXX
 )
 
 set(CMAKE_C_STANDARD 99)
@@ -23,6 +23,17 @@ set(CMAKE_POSITION_INDEPENDENT_CODE ON)
 
 file(GLOB_RECURSE NOVA_SRC CONFIGURE_DEPENDS "src/*.c")
 add_executable(nova ${NOVA_SRC})
+
+set(IMGUI_SRC
+    ${CMAKE_SOURCE_DIR}/vendor/imgui/imgui.cpp
+    ${CMAKE_SOURCE_DIR}/vendor/imgui/imgui_draw.cpp
+    ${CMAKE_SOURCE_DIR}/vendor/imgui/imgui_tables.cpp
+    ${CMAKE_SOURCE_DIR}/vendor/imgui/imgui_widgets.cpp
+    ${CMAKE_SOURCE_DIR}/vendor/imgui/backends/imgui_impl_glfw.cpp
+    ${CMAKE_SOURCE_DIR}/vendor/imgui/backends/imgui_impl_opengl3.cpp
+)
+
+target_sources(nova PRIVATE ${IMGUI_SRC})
 
 # Including all the cool libraries
 target_include_directories(nova
@@ -63,30 +74,29 @@ else()
     endif()
 endif()
 
-# Linking important libraries!
+# Linking important libraries! (and setting subsystems)
 if(WIN32)
     set(STEAMWORKS_LIB_DIR "C:/steamworks/sdk/redistributable_bin/win64")
     set(GLFW_LIB_DIR "${CMAKE_SOURCE_DIR}/vendor/glfw")
     set(GLEW_LIB_DIR "${CMAKE_SOURCE_DIR}/vendor/glew")
 
-    link_directories(
-        ${STEAMWORKS_LIB_DIR}
-        ${GLFW_LIB_DIR}
-        ${GLEW_LIB_DIR}
-    )
-
     target_link_libraries(nova PRIVATE
-        glfw3dll.lib
-        steam_api64.lib
         opengl32.lib
         winmm.lib
         kernel32.lib
         user32.lib
         gdi32.lib
         shell32.lib
-        glew32.lib
-        
+        "${CMAKE_SOURCE_DIR}/vendor/glfw/glfw3dll.lib"
+        "${CMAKE_SOURCE_DIR}/vendor/glew/glew32.lib"
+        "${STEAMWORKS_LIB_DIR}/steam_api64.lib"   
     )
+
+    if(CMAKE_BUILD_TYPE STREQUAL "Release")
+        set_target_properties(nova PROPERTIES
+            LINK_FLAGS "/SUBSYSTEM:WINDOWS /ENTRY:WinMainCRTStartup"
+        )
+    endif()
 elseif(CMAKE_SYSTEM_NAME STREQUAL "Darwin")
     # Come back to this
 else()
