@@ -128,7 +128,10 @@ if(CMAKE_SYSTEM_NAME STREQUAL "Windows")
         COMMAND ${CMAKE_COMMAND} -E copy_if_different
             "${CMAKE_SOURCE_DIR}/vendor/glew/glew32.dll"
             $<TARGET_FILE_DIR:nova>
-        COMMENT "Copied required runtime dlls to output directory."
+        COMMAND ${CMAKE_COMMAND} -E copy_if_different
+            "${CMAKE_SOURCE_DIR}/steam_appid.txt"
+            $<TARGET_FILE_DIR:nova>
+        COMMENT "Copied required files to output directory."
     )
 endif()
 

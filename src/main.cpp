@@ -18,6 +18,7 @@
 #include "backends/imgui_impl_glfw.h"
 #include "backends/imgui_impl_opengl2.h"
 #include <iostream>
+#include "steam_mgr.h"
 
 int main(void) {
     // GLFW + GLEW init steps
@@ -25,7 +26,7 @@ int main(void) {
         std::cerr << "GLFW init fail!\n";
     }
 
-    GLFWwindow *window = glfwCreateWindow(800, 600, "Nova - OpenGL2 + GLFW", nullptr, nullptr);
+    GLFWwindow *window = glfwCreateWindow(800, 600, "Nova", nullptr, nullptr);
     if(!window) {
         std::cerr << "Failed to create GLFW window!\n";
         glfwTerminate();
@@ -50,6 +51,12 @@ int main(void) {
 
     ImGui_ImplGlfw_InitForOpenGL(window, true);
     ImGui_ImplOpenGL2_Init();
+
+    std::cout << "OpenGL Version: " << glGetString(GL_VERSION) << "\n";
+    std::cout << "GLFW Version: " << glfwGetVersionString() << "\n";
+    std::cout << "GLEW Version: " << glewGetString(GLEW_VERSION) << "\n";
+    std::cout << "Imgui Version: " << ImGui::GetVersion() << "\n";
+    std::cout << "Steamworks: 1.62\n";
 
     // Actual event loop / main loop
     while(!glfwWindowShouldClose(window)) {
