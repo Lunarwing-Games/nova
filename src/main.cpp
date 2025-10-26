@@ -28,6 +28,7 @@ static Camera cam;
 static float lastX = 400.0f, lastY = 300.0f;
 static bool firstMouse = true;
 static float deltaTime = 0.0f, lastFrame = 0.0f;
+static bool cursorCaptured = true;
 
 void mouse_callback(GLFWwindow* window, double xpos, double ypos) {
     if (firstMouse) { lastX = (float)xpos; lastY = (float)ypos; firstMouse = false; }
@@ -36,6 +37,20 @@ void mouse_callback(GLFWwindow* window, double xpos, double ypos) {
     lastX = (float)xpos;
     lastY = (float)ypos;
     camera_process_mouse(&cam, xoffset, yoffset);
+}
+
+void key_callback(GLFWwindow* window, int key, int scancode, int action, int mods)
+{
+    if (key == GLFW_KEY_ESCAPE && action == GLFW_PRESS) {
+        cursorCaptured = !cursorCaptured;
+
+        if (cursorCaptured) {
+            glfwSetInputMode(window, GLFW_CURSOR, GLFW_CURSOR_DISABLED);
+            firstMouse = true; // reset so we don't jump when re-capturing
+        } else {
+            glfwSetInputMode(window, GLFW_CURSOR, GLFW_CURSOR_NORMAL);
+        }
+    }
 }
 
 int main(void) {
@@ -80,6 +95,8 @@ int main(void) {
     vec3 pos = {0.0f, 0.0f, 3.0f};
     camera_init(&cam, pos);
     glfwSetCursorPosCallback(window, mouse_callback);
+    glfwSetKeyCallback(window, key_callback);
+
     glfwSetInputMode(window, GLFW_CURSOR, GLFW_CURSOR_DISABLED);
     glEnable(GL_DEPTH_TEST);
 
@@ -88,16 +105,23 @@ int main(void) {
         float current_frame = (float)glfwGetTime();
         deltaTime = current_frame - lastFrame;
         lastFrame = current_frame;
+        if(cursorCaptured) {
+            int forward = glfwGetKey(window, GLFW_KEY_W) == GLFW_PRESS;
+            int backward = glfwGetKey(window, GLFW_KEY_S) == GLFW_PRESS;
+            int left = glfwGetKey(window, GLFW_KEY_A) == GLFW_PRESS;
+            int right = glfwGetKey(window, GLFW_KEY_D) == GLFW_PRESS;
+            int up = glfwGetKey(window, GLFW_KEY_SPACE) == GLFW_PRESS;
+            int down = glfwGetKey(window, GLFW_KEY_LEFT_SHIFT) == GLFW_PRESS;
+            camera_process_movement(&cam, forward, backward, left, right, deltaTime);
+            camera_process_vertical(&cam, up, down, deltaTime);
+        }
 
-        int forward = glfwGetKey(window, GLFW_KEY_W) == GLFW_PRESS;
-        int backward = glfwGetKey(window, GLFW_KEY_S) == GLFW_PRESS;
-        int left = glfwGetKey(window, GLFW_KEY_A) == GLFW_PRESS;
-        int right = glfwGetKey(window, GLFW_KEY_D) == GLFW_PRESS;
-        int up = glfwGetKey(window, GLFW_KEY_SPACE) == GLFW_PRESS;
-        int down = glfwGetKey(window, GLFW_KEY_LEFT_SHIFT) == GLFW_PRESS;
-
-        camera_process_movement(&cam, forward, backward, left, right, deltaTime);
-        camera_process_vertical(&cam, up, down, deltaTime);
+        // Dispose of NoMouse flag from imgui for interactive UI
+        io.ConfigFlags &= ~ImGuiConfigFlags_NoMouse;
+        if (cursorCaptured) {
+            // Lock if mouse is busy/captured
+            io.ConfigFlags |= ImGuiConfigFlags_NoMouse;
+        }
 
         // render
         ImGui_ImplOpenGL2_NewFrame();
@@ -135,9 +159,12 @@ int main(void) {
         glPopMatrix();
 
         // imgui overlay
-        ImGui::Begin("Debug");
+        ImGui::SetNextWindowPos(ImVec2(20, 20), ImGuiCond_FirstUseEver);
+        ImGui::SetNextWindowSize(ImVec2(300, 150), ImGuiCond_FirstUseEver);
+        ImGui::Begin("Debug Info");
         ImGui::Text("FPS: %.1f", 1.0f / deltaTime);
         ImGui::Text("Position: %.2f, %.2f, %.2f", cam.position[0], cam.position[1], cam.position[2]);
+        ImGui::Text("Mouse: %s (esc to toggle)", cursorCaptured ? "Captured" : "Free");
         ImGui::End();
 
         ImGui::Render();

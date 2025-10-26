@@ -3,7 +3,7 @@
 #include <stdlib.h>
 #include <string.h>
 
-#define STB_VORBIS_HEADER_ONLY
+#define STB_VORBIS_IMPLEMENTATION
 #include "stb_vorbis.c"
 
 static ALCdevice *device = NULL;

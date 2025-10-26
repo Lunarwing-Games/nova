@@ -11,6 +11,7 @@
 #include <stdint.h>
 #include <stdio.h>
 
+// You do not need to #define this yourself, this is done via CMake!
 #ifndef BUILD_WITH_STEAMWORKS
 
 // Turn all the cool steam funcs/macros into no-ops in case we don't want it

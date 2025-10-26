@@ -43,10 +43,13 @@ void camera_process_mouse(Camera *cam, float xoffset, float yoffset) {
     xoffset *= cam->mouse_sens;
     yoffset *= cam->mouse_sens;
 
-    if (cam->yaw > 360.0f) cam->yaw -= 360.0f;
-    else if (cam->yaw < 0.0f) cam->yaw += 360.0f;
+    cam->yaw += xoffset;
+    cam->pitch += yoffset;
 
     cam->pitch = CLAMP(cam->pitch, -89.0f, 89.0f);
+
+    if (cam->yaw > 360.0f) cam->yaw -= 360.0f;
+    else if (cam->yaw < 0.0f) cam->yaw += 360.0f;
 
     camera_update(cam);
 }
