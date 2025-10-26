@@ -103,6 +103,7 @@ if(WIN32)
         shell32.lib
         "${CMAKE_SOURCE_DIR}/vendor/glfw/glfw3dll.lib"
         "${CMAKE_SOURCE_DIR}/vendor/glew/glew32.lib"
+        "${CMAKE_SOURCE_DIR}/vendor/openal/OpenAL32.lib"
         "${STEAMWORKS_LIB_DIR}/steam_api64.lib"
     )
 
@@ -169,6 +170,9 @@ if(CMAKE_SYSTEM_NAME STREQUAL "Windows")
             $<TARGET_FILE_DIR:nova>
         COMMAND ${CMAKE_COMMAND} -E copy_if_different
             "${CMAKE_SOURCE_DIR}/vendor/glew/glew32.dll"
+            $<TARGET_FILE_DIR:nova>
+        COMMAND ${CMAKE_COMMAND} -E copy_if_different
+            "${CMAKE_SOURCE_DIR}/vendor/openal/OpenAL32.dll"
             $<TARGET_FILE_DIR:nova>
         COMMAND ${CMAKE_COMMAND} -E copy_if_different
             "${CMAKE_SOURCE_DIR}/steam_appid.txt"

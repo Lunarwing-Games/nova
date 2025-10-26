@@ -77,7 +77,8 @@ int main(void) {
     std::cout << "Steamworks: 1.62\n";
 
     // Camera test setup
-    camera_init(&cam, (vec3){0.0f, 0.0f, 3.0f});
+    vec3 pos = {0.0f, 0.0f, 3.0f};
+    camera_init(&cam, pos);
     glfwSetCursorPosCallback(window, mouse_callback);
     glfwSetInputMode(window, GLFW_CURSOR, GLFW_CURSOR_DISABLED);
     glEnable(GL_DEPTH_TEST);
