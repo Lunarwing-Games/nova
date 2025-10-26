@@ -14,11 +14,12 @@
 
 #include <GL/glew.h>
 #include <GLFW/glfw3.h>
+#include <iostream>
+#include <cmath>
 #include "imgui.h"
 #include "backends/imgui_impl_glfw.h"
 #include "backends/imgui_impl_opengl2.h"
-#include <iostream>
-#include <cmath>
+#include "shader.h"
 #include "camera.h"
 
 #include "steam_mgr.h"
@@ -100,6 +101,13 @@ int main(void) {
     glfwSetInputMode(window, GLFW_CURSOR, GLFW_CURSOR_DISABLED);
     glEnable(GL_DEPTH_TEST);
 
+    ShaderProgram testShader = shader_load("test1.vert", "test1.frag");
+    if (testShader.id == 0) {
+        std::cerr << "Shader failed to compile/link!\n";
+    } else {
+        std::cout << "Shader loaded successfully.\n";
+    }
+
     // Actual event loop / main loop
     while(!glfwWindowShouldClose(window)) {
         float current_frame = (float)glfwGetTime();
@@ -139,15 +147,24 @@ int main(void) {
         camera_get_view(&cam, view);
         camera_get_projection(&cam, proj, (float)display_w / display_h, 0.1f, 100.0f);
 
-        // fixed-function setup
-        glMatrixMode(GL_PROJECTION);
-        glLoadMatrixf((const GLfloat*)proj);
-        glMatrixMode(GL_MODELVIEW);
-        glLoadMatrixf((const GLfloat*)view);
+        glUseProgram(testShader.id);
 
-        // spinning cube
-        glPushMatrix();
-        glRotatef((float)glfwGetTime() * 30.0f, 0.5f, 1.0f, 0.0f);
+        mat4 pv, mvp, model;
+        vec3 axis = {0.5f, 1.0f, 0.0f};
+        glm_mat4_identity(model);
+        glm_rotate(model, (float)glfwGetTime() * glm_rad(30.0f), axis);
+        camera_get_view(&cam, view);
+        camera_get_projection(&cam, proj, (float)display_w / display_h, 0.1f, 100.0f);
+
+        // pv = proj * view ; then mvp = pv * model
+        glm_mat4_mul(proj, view, pv);
+        glm_mat4_mul(pv, model, mvp);
+
+        GLint loc = glGetUniformLocation(testShader.id, "uMVP");
+        if (loc >= 0)
+            glUniformMatrix4fv(loc, 1, GL_FALSE, (const GLfloat*)mvp);
+
+        // Simple immediate cube for now
         glBegin(GL_QUADS);
             glColor3f(1,0,0); glVertex3f(-1,-1, 1); glVertex3f( 1,-1, 1); glVertex3f( 1, 1, 1); glVertex3f(-1, 1, 1);
             glColor3f(0,1,0); glVertex3f(-1,-1,-1); glVertex3f(-1, 1,-1); glVertex3f( 1, 1,-1); glVertex3f( 1,-1,-1);
@@ -156,7 +173,8 @@ int main(void) {
             glColor3f(0,1,1); glVertex3f( 1,-1,-1); glVertex3f( 1, 1,-1); glVertex3f( 1, 1, 1); glVertex3f( 1,-1, 1);
             glColor3f(1,0,1); glVertex3f(-1,-1,-1); glVertex3f(-1,-1, 1); glVertex3f(-1, 1, 1); glVertex3f(-1, 1,-1);
         glEnd();
-        glPopMatrix();
+
+        glUseProgram(0);
 
         // imgui overlay
         ImGui::SetNextWindowPos(ImVec2(20, 20), ImGuiCond_FirstUseEver);

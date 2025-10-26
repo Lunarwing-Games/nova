@@ -1,11 +1,20 @@
+# Directories
 vendor/
 build/
 .vscode/
 
+# Config / per-user files
 .DS_Store
 imgui.ini
 
+# Compression
 *.tar.gz
 *.tar.bz2
 *.tar
 *.zip
+
+# Shaders
+*.frag
+*.vert
+*.glsl
+*.hlsl
