@@ -61,12 +61,11 @@ target_include_directories(nova
 
 if(BUILD_WITH_STEAMWORKS)
     add_compile_definitions(BUILD_WITH_STEAMWORKS)
-endif()
-
-if(CMAKE_SYSTEM_NAME STREQUAL "Windows")
-    target_include_directories(nova PRIVATE "C:/steamworks/sdk/public")
-else()
-    target_include_directories(nova PRIVATE "$ENV{HOME}/sdk/public")
+    if(CMAKE_SYSTEM_NAME STREQUAL "Windows")
+        target_include_directories(nova PRIVATE "C:/steamworks/sdk/public")
+    else()
+        target_include_directories(nova PRIVATE "$ENV{HOME}/sdk/public")
+    endif()
 endif()
 
 # Compile flags and definitions
@@ -92,7 +91,9 @@ endif()
 
 # Linking important libraries! (and setting subsystems)
 if(WIN32)
-    set(STEAMWORKS_LIB_DIR "C:/steamworks/sdk/redistributable_bin/win64")
+    if(BUILD_WITH_STEAMWORKS)
+        set(STEAMWORKS_LIB_DIR "C:/steamworks/sdk/redistributable_bin/win64")
+    endif()
 
     target_link_libraries(nova PRIVATE
         opengl32.lib
@@ -104,8 +105,11 @@ if(WIN32)
         "${CMAKE_SOURCE_DIR}/vendor/glfw/glfw3dll.lib"
         "${CMAKE_SOURCE_DIR}/vendor/glew/glew32.lib"
         "${CMAKE_SOURCE_DIR}/vendor/openal/OpenAL32.lib"
-        "${STEAMWORKS_LIB_DIR}/steam_api64.lib"
     )
+
+    if(BUILD_WITH_STEAMWORKS)
+        target_link_libraries(nova PRIVATE "${STEAMWORKS_LIB_DIR}/steam_api64.lib")
+    endif()
 
     if(CMAKE_BUILD_TYPE STREQUAL "Release")
         set_target_properties(nova PROPERTIES
@@ -114,7 +118,9 @@ if(WIN32)
     endif()
 elseif(CMAKE_SYSTEM_NAME STREQUAL "Darwin")
     # Turns out, mac linking is a fair bit harder than expected!
-    set(STEAMWORKS_LIB_DIR "$ENV{HOME}/sdk/redistributable_bin/osx")
+    if(BUILD_WITH_STEAMWORKS)
+        set(STEAMWORKS_LIB_DIR "$ENV{HOME}/sdk/redistributable_bin/osx")
+    endif()
 
     find_library(COCOA_LIB Cocoa)
     find_library(IOKIT_LIB IOKit)
@@ -140,9 +146,12 @@ elseif(CMAKE_SYSTEM_NAME STREQUAL "Darwin")
         ${OPENGL_LIB}
         GLEW_LIB
         GLFW_LIB
-        "${STEAMWORKS_LIB_DIR}/libsteam_api.dylib"
         "${CMAKE_SOURCE_DIR}/vendor/openal/libopenal.1.24.3.dylib"
     )
+
+    if(BUILD_WITH_STEAMWORKS)
+        target_link_libraries(nova PRIVATE "${STEAMWORKS_LIB_DIR}/libsteam_api.dylib")
+    endif()
 
     set_target_properties(nova PROPERTIES
         BUILD_RPATH "@loader_path"
@@ -160,11 +169,8 @@ else()
     )
 endif()
 
-if(CMAKE_SYSTEM_NAME STREQUAL "Windows")
+if(WIN32)
     add_custom_command(TARGET nova POST_BUILD
-        COMMAND ${CMAKE_COMMAND} -E copy_if_different
-            "${STEAMWORKS_LIB_DIR}/steam_api64.dll"
-            $<TARGET_FILE_DIR:nova>
         COMMAND ${CMAKE_COMMAND} -E copy_if_different
             "${CMAKE_SOURCE_DIR}/vendor/glfw/glfw3.dll"
             $<TARGET_FILE_DIR:nova>
@@ -177,36 +183,48 @@ if(CMAKE_SYSTEM_NAME STREQUAL "Windows")
         COMMAND ${CMAKE_COMMAND} -E copy_if_different
             "${CMAKE_SOURCE_DIR}/steam_appid.txt"
             $<TARGET_FILE_DIR:nova>
-        COMMENT "Copied required files to output directory."
+        COMMENT "Copied core DLLs to output directory (GLFW, GLEW, OpenAL, steam_appid.txt)."
     )
+
+    if(BUILD_WITH_STEAMWORKS)
+        add_custom_command(TARGET nova POST_BUILD
+            COMMAND ${CMAKE_COMMAND} -E copy_if_different
+                "${STEAMWORKS_LIB_DIR}/steam_api64.dll"
+                $<TARGET_FILE_DIR:nova>
+            COMMENT "Copied Steamworks redistributable (steam_api64.dll)."
+        )
+    endif()
 elseif(APPLE)
     set(DYLIB_DEST "$<TARGET_FILE_DIR:nova>")
+
     add_custom_command(TARGET nova POST_BUILD
-        COMMAND ${CMAKE_COMMAND} -E copy_if_different
-            "${STEAMWORKS_LIB_DIR}/libsteam_api.dylib" "${DYLIB_DEST}"
         COMMAND ${CMAKE_COMMAND} -E copy_if_different
             "${CMAKE_SOURCE_DIR}/vendor/glfw/libglfw.3.4.dylib" "${DYLIB_DEST}"
         COMMAND ${CMAKE_COMMAND} -E copy_if_different
             "${CMAKE_SOURCE_DIR}/vendor/glew/libGLEW.2.2.0.dylib" "${DYLIB_DEST}"
         COMMAND ${CMAKE_COMMAND} -E copy_if_different
-            "${CMAKE_SOURCE_DIR}/steam_appid.txt" "${DYLIB_DEST}"
-        COMMAND ${CMAKE_COMMAND} -E copy_if_different
             "${CMAKE_SOURCE_DIR}/vendor/openal/libopenal.1.24.3.dylib" "${DYLIB_DEST}"
-        COMMENT "Copied required dylibs beside nova executable (macOS)."
+        COMMAND ${CMAKE_COMMAND} -E copy_if_different
+            "${CMAKE_SOURCE_DIR}/steam_appid.txt" "${DYLIB_DEST}"
+        COMMENT "Copied GLFW, GLEW, OpenAL dylibs beside nova executable."
     )
-    # Ultimate macos haxs!
+
+    if(BUILD_WITH_STEAMWORKS)
+        add_custom_command(TARGET nova POST_BUILD
+            COMMAND ${CMAKE_COMMAND} -E copy_if_different
+                "${STEAMWORKS_LIB_DIR}/libsteam_api.dylib" "${DYLIB_DEST}"
+            COMMENT "Copied Steamworks redistributable (libsteam_api.dylib)."
+        )
+    endif()
+
     add_custom_command(TARGET nova POST_BUILD
-        COMMAND install_name_tool -change "/usr/local/lib/libGLEW.2.2.0.dylib" "@loader_path/libGLEW.2.2.0.dylib" $<TARGET_FILE:nova>
-        COMMAND otool -L $<TARGET_FILE:nova> | grep GLEW || true
-        COMMENT "Rebinding libGLEW.2.2.0.dylib to @loader_path (local copy).\n"
-    )
-    add_custom_command(TARGET nova POST_BUILD
-        COMMAND install_name_tool -change "@rpath/libglfw.3.dylib" "@loader_path/libglfw.3.4.dylib" $<TARGET_FILE:nova>
-        COMMENT "Rebinding GLFW to @loader_path/libglfw.3.4.dylib\n"
-    )
-    add_custom_command(TARGET nova POST_BUILD
-        COMMAND install_name_tool -change "@rpath/libopenal.1.dylib" "@loader_path/libopenal.1.24.3.dylib" $<TARGET_FILE:nova>
-        COMMENT "Rebinding OpenAL to @loader_path/libopenal.1.24.3.dylib\n"
+        COMMAND install_name_tool -change "/usr/local/lib/libGLEW.2.2.0.dylib"
+            "@loader_path/libGLEW.2.2.0.dylib" $<TARGET_FILE:nova>
+        COMMAND install_name_tool -change "@rpath/libglfw.3.dylib"
+            "@loader_path/libglfw.3.4.dylib" $<TARGET_FILE:nova>
+        COMMAND install_name_tool -change "@rpath/libopenal.1.dylib"
+            "@loader_path/libopenal.1.24.3.dylib" $<TARGET_FILE:nova>
+        COMMENT "Rebinding dylib install names to @loader_path (macOS)."
     )
 endif()
 
