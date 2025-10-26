@@ -25,6 +25,8 @@ set(CMAKE_CXX_EXTENSIONS OFF)
 
 set(CMAKE_POSITION_INDEPENDENT_CODE ON)
 
+option(BUILD_WITH_STEAMWORKS "Enables the use of Steamworks (provide your own headers/libs)!" OFF)
+
 file(GLOB_RECURSE NOVA_SRC CONFIGURE_DEPENDS "src/*.c" "src/*.cpp")
 add_executable(nova ${NOVA_SRC})
 
@@ -55,6 +57,10 @@ target_include_directories(nova
         "${CMAKE_SOURCE_DIR}/vendor/imgui/imstb_textedit.h"
         "${CMAKE_SOURCE_DIR}/vendor/imgui/imstb_truetype.h"
 )
+
+if(BUILD_WITH_STEAMWORKS)
+    add_compile_definitions(BUILD_WITH_STEAMWORKS)
+endif()
 
 if(CMAKE_SYSTEM_NAME STREQUAL "Windows")
     target_include_directories(nova PRIVATE "C:/steamworks/sdk/public")
