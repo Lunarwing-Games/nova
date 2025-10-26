@@ -105,7 +105,41 @@ if(WIN32)
         )
     endif()
 elseif(CMAKE_SYSTEM_NAME STREQUAL "Darwin")
-    # Come back to this
+    # Turns out, mac linking is a fair bit harder than expected!
+    set(STEAMWORKS_LIB_DIR "$ENV{HOME}/sdk/redistributable_bin/osx")
+
+    find_library(COCOA_LIB Cocoa)
+    find_library(IOKIT_LIB IOKit)
+    find_library(COREVIDEO_LIB CoreVideo)
+    find_library(OPENGL_LIB OpenGL)
+
+    add_library(GLEW_LIB SHARED IMPORTED)
+    set_target_properties(GLEW_LIB PROPERTIES
+        IMPORTED_LOCATION "${CMAKE_SOURCE_DIR}/vendor/glew/libGLEW.2.2.0.dylib"
+        INTERFACE_INCLUDE_DIRECTORIES "${CMAKE_SOURCE_DIR}/vendor/glew/include"
+    )
+
+    add_library(GLFW_LIB SHARED IMPORTED)
+    set_target_properties(GLFW_LIB PROPERTIES
+        IMPORTED_LOCATION "${CMAKE_SOURCE_DIR}/vendor/glfw/libglfw.3.4.dylib"
+        INTERFACE_INCLUDE_DIRECTORIES "${CMAKE_SOURCE_DIR}/vendor/glfw/include"
+    )
+
+    target_link_libraries(nova PRIVATE
+        ${COCOA_LIB}
+        ${IOKIT_LIB}
+        ${COREVIDEO_LIB}
+        ${OPENGL_LIB}
+        GLEW_LIB
+        GLFW_LIB
+        "${STEAMWORKS_LIB_DIR}/libsteam_api.dylib"
+    )
+
+    set_target_properties(nova PROPERTIES
+        BUILD_RPATH "@loader_path"
+        INSTALL_RPATH "@loader_path"
+        MACOSX_RPATH ON
+    )
 else()
     find_package(OpenGL REQUIRED)
     target_link_libraries(nova PRIVATE
@@ -132,6 +166,29 @@ if(CMAKE_SYSTEM_NAME STREQUAL "Windows")
             "${CMAKE_SOURCE_DIR}/steam_appid.txt"
             $<TARGET_FILE_DIR:nova>
         COMMENT "Copied required files to output directory."
+    )
+elseif(APPLE)
+    set(DYLIB_DEST "$<TARGET_FILE_DIR:nova>")
+    add_custom_command(TARGET nova POST_BUILD
+        COMMAND ${CMAKE_COMMAND} -E copy_if_different
+            "${STEAMWORKS_LIB_DIR}/libsteam_api.dylib" "${DYLIB_DEST}"
+        COMMAND ${CMAKE_COMMAND} -E copy_if_different
+            "${CMAKE_SOURCE_DIR}/vendor/glfw/libglfw.3.4.dylib" "${DYLIB_DEST}"
+        COMMAND ${CMAKE_COMMAND} -E copy_if_different
+            "${CMAKE_SOURCE_DIR}/vendor/glew/libGLEW.2.2.0.dylib" "${DYLIB_DEST}"
+        COMMAND ${CMAKE_COMMAND} -E copy_if_different
+            "${CMAKE_SOURCE_DIR}/steam_appid.txt" "${DYLIB_DEST}"
+        COMMENT "Copied required dylibs beside nova executable (macOS)."
+    )
+    # Ultimate macos haxs!
+    add_custom_command(TARGET nova POST_BUILD
+        COMMAND install_name_tool -change "/usr/local/lib/libGLEW.2.2.0.dylib" "@loader_path/libGLEW.2.2.0.dylib" $<TARGET_FILE:nova>
+        COMMAND otool -L $<TARGET_FILE:nova> | grep GLEW || true
+        COMMENT "Rebinding libGLEW.2.2.0.dylib to @loader_path (local copy)."
+    )
+    add_custom_command(TARGET nova POST_BUILD
+        COMMAND install_name_tool -change "@rpath/libglfw.3.dylib" "@loader_path/libglfw.3.4.dylib" $<TARGET_FILE:nova>
+        COMMENT "Rebinding GLFW to @loader_path/libglfw.3.4.dylib"
     )
 endif()
 
