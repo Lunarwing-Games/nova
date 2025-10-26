@@ -56,6 +56,7 @@ target_include_directories(nova
         "${CMAKE_SOURCE_DIR}/vendor/imgui/imstb_rectpack.h"
         "${CMAKE_SOURCE_DIR}/vendor/imgui/imstb_textedit.h"
         "${CMAKE_SOURCE_DIR}/vendor/imgui/imstb_truetype.h"
+        "${CMAKE_SOURCE_DIR}/vendor/openal/include"
 )
 
 if(BUILD_WITH_STEAMWORKS)
@@ -102,7 +103,7 @@ if(WIN32)
         shell32.lib
         "${CMAKE_SOURCE_DIR}/vendor/glfw/glfw3dll.lib"
         "${CMAKE_SOURCE_DIR}/vendor/glew/glew32.lib"
-        "${STEAMWORKS_LIB_DIR}/steam_api64.lib"   
+        "${STEAMWORKS_LIB_DIR}/steam_api64.lib"
     )
 
     if(CMAKE_BUILD_TYPE STREQUAL "Release")
@@ -139,6 +140,7 @@ elseif(CMAKE_SYSTEM_NAME STREQUAL "Darwin")
         GLEW_LIB
         GLFW_LIB
         "${STEAMWORKS_LIB_DIR}/libsteam_api.dylib"
+        "${CMAKE_SOURCE_DIR}/vendor/openal/libopenal.1.24.3.dylib"
     )
 
     set_target_properties(nova PROPERTIES
@@ -184,17 +186,23 @@ elseif(APPLE)
             "${CMAKE_SOURCE_DIR}/vendor/glew/libGLEW.2.2.0.dylib" "${DYLIB_DEST}"
         COMMAND ${CMAKE_COMMAND} -E copy_if_different
             "${CMAKE_SOURCE_DIR}/steam_appid.txt" "${DYLIB_DEST}"
+        COMMAND ${CMAKE_COMMAND} -E copy_if_different
+            "${CMAKE_SOURCE_DIR}/vendor/openal/libopenal.1.24.3.dylib" "${DYLIB_DEST}"
         COMMENT "Copied required dylibs beside nova executable (macOS)."
     )
     # Ultimate macos haxs!
     add_custom_command(TARGET nova POST_BUILD
         COMMAND install_name_tool -change "/usr/local/lib/libGLEW.2.2.0.dylib" "@loader_path/libGLEW.2.2.0.dylib" $<TARGET_FILE:nova>
         COMMAND otool -L $<TARGET_FILE:nova> | grep GLEW || true
-        COMMENT "Rebinding libGLEW.2.2.0.dylib to @loader_path (local copy)."
+        COMMENT "Rebinding libGLEW.2.2.0.dylib to @loader_path (local copy).\n"
     )
     add_custom_command(TARGET nova POST_BUILD
         COMMAND install_name_tool -change "@rpath/libglfw.3.dylib" "@loader_path/libglfw.3.4.dylib" $<TARGET_FILE:nova>
-        COMMENT "Rebinding GLFW to @loader_path/libglfw.3.4.dylib"
+        COMMENT "Rebinding GLFW to @loader_path/libglfw.3.4.dylib\n"
+    )
+    add_custom_command(TARGET nova POST_BUILD
+        COMMAND install_name_tool -change "@rpath/libopenal.1.dylib" "@loader_path/libopenal.1.24.3.dylib" $<TARGET_FILE:nova>
+        COMMENT "Rebinding OpenAL to @loader_path/libopenal.1.24.3.dylib\n"
     )
 endif()
 
