@@ -24,36 +24,6 @@
 
 #include "steam_mgr.h"
 
-// Globals for camera demo
-static Camera cam;
-static float lastX = 400.0f, lastY = 300.0f;
-static bool firstMouse = true;
-static float deltaTime = 0.0f, lastFrame = 0.0f;
-static bool cursorCaptured = true;
-
-void mouse_callback(GLFWwindow* window, double xpos, double ypos) {
-    if (firstMouse) { lastX = (float)xpos; lastY = (float)ypos; firstMouse = false; }
-    float xoffset = (float)xpos - lastX;
-    float yoffset = lastY - (float)ypos; // reversed Y
-    lastX = (float)xpos;
-    lastY = (float)ypos;
-    camera_process_mouse(&cam, xoffset, yoffset);
-}
-
-void key_callback(GLFWwindow* window, int key, int scancode, int action, int mods)
-{
-    if (key == GLFW_KEY_ESCAPE && action == GLFW_PRESS) {
-        cursorCaptured = !cursorCaptured;
-
-        if (cursorCaptured) {
-            glfwSetInputMode(window, GLFW_CURSOR, GLFW_CURSOR_DISABLED);
-            firstMouse = true; // reset so we don't jump when re-capturing
-        } else {
-            glfwSetInputMode(window, GLFW_CURSOR, GLFW_CURSOR_NORMAL);
-        }
-    }
-}
-
 int main(void) {
     // GLFW + GLEW init steps
     if(!glfwInit()) {
@@ -79,7 +49,6 @@ int main(void) {
     IMGUI_CHECKVERSION();
     ImGui::CreateContext();
     ImGuiIO &io = ImGui::GetIO();
-    (void)io;
 
     ImGui::StyleColorsDark();
 
@@ -91,45 +60,15 @@ int main(void) {
     std::cout << "GLEW Version: " << glewGetString(GLEW_VERSION) << "\n";
     std::cout << "Imgui Version: " << ImGui::GetVersion() << "\n";
     std::cout << "Steamworks: 1.62\n";
-
-    // Camera test setup
-    vec3 pos = {0.0f, 0.0f, 3.0f};
-    camera_init(&cam, pos);
-    glfwSetCursorPosCallback(window, mouse_callback);
-    glfwSetKeyCallback(window, key_callback);
-
-    glfwSetInputMode(window, GLFW_CURSOR, GLFW_CURSOR_DISABLED);
-    glEnable(GL_DEPTH_TEST);
-
-    ShaderProgram testShader = shader_load("test1.vert", "test1.frag");
-    if (testShader.id == 0) {
-        std::cerr << "Shader failed to compile/link!\n";
-    } else {
-        std::cout << "Shader loaded successfully.\n";
-    }
+    
+    float deltaTime = 0.0f;
+    float lastFrame = 0.0f;
 
     // Actual event loop / main loop
     while(!glfwWindowShouldClose(window)) {
         float current_frame = (float)glfwGetTime();
         deltaTime = current_frame - lastFrame;
         lastFrame = current_frame;
-        if(cursorCaptured) {
-            int forward = glfwGetKey(window, GLFW_KEY_W) == GLFW_PRESS;
-            int backward = glfwGetKey(window, GLFW_KEY_S) == GLFW_PRESS;
-            int left = glfwGetKey(window, GLFW_KEY_A) == GLFW_PRESS;
-            int right = glfwGetKey(window, GLFW_KEY_D) == GLFW_PRESS;
-            int up = glfwGetKey(window, GLFW_KEY_SPACE) == GLFW_PRESS;
-            int down = glfwGetKey(window, GLFW_KEY_LEFT_SHIFT) == GLFW_PRESS;
-            camera_process_movement(&cam, forward, backward, left, right, deltaTime);
-            camera_process_vertical(&cam, up, down, deltaTime);
-        }
-
-        // Dispose of NoMouse flag from imgui for interactive UI
-        io.ConfigFlags &= ~ImGuiConfigFlags_NoMouse;
-        if (cursorCaptured) {
-            // Lock if mouse is busy/captured
-            io.ConfigFlags |= ImGuiConfigFlags_NoMouse;
-        }
 
         // render
         ImGui_ImplOpenGL2_NewFrame();
@@ -142,47 +81,8 @@ int main(void) {
         glClearColor(0.1f, 0.1f, 0.1f, 1.0f);
         glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
 
-        // camera matrices
-        mat4 view, proj;
-        camera_get_view(&cam, view);
-        camera_get_projection(&cam, proj, (float)display_w / display_h, 0.1f, 100.0f);
-
-        glUseProgram(testShader.id);
-
-        mat4 pv, mvp, model;
-        vec3 axis = {0.5f, 1.0f, 0.0f};
-        glm_mat4_identity(model);
-        glm_rotate(model, (float)glfwGetTime() * glm_rad(30.0f), axis);
-        camera_get_view(&cam, view);
-        camera_get_projection(&cam, proj, (float)display_w / display_h, 0.1f, 100.0f);
-
-        // pv = proj * view ; then mvp = pv * model
-        glm_mat4_mul(proj, view, pv);
-        glm_mat4_mul(pv, model, mvp);
-
-        GLint loc = glGetUniformLocation(testShader.id, "uMVP");
-        if (loc >= 0)
-            glUniformMatrix4fv(loc, 1, GL_FALSE, (const GLfloat*)mvp);
-
-        // Simple immediate cube for now
-        glBegin(GL_QUADS);
-            glColor3f(1,0,0); glVertex3f(-1,-1, 1); glVertex3f( 1,-1, 1); glVertex3f( 1, 1, 1); glVertex3f(-1, 1, 1);
-            glColor3f(0,1,0); glVertex3f(-1,-1,-1); glVertex3f(-1, 1,-1); glVertex3f( 1, 1,-1); glVertex3f( 1,-1,-1);
-            glColor3f(0,0,1); glVertex3f(-1, 1,-1); glVertex3f(-1, 1, 1); glVertex3f( 1, 1, 1); glVertex3f( 1, 1,-1);
-            glColor3f(1,1,0); glVertex3f(-1,-1,-1); glVertex3f( 1,-1,-1); glVertex3f( 1,-1, 1); glVertex3f(-1,-1, 1);
-            glColor3f(0,1,1); glVertex3f( 1,-1,-1); glVertex3f( 1, 1,-1); glVertex3f( 1, 1, 1); glVertex3f( 1,-1, 1);
-            glColor3f(1,0,1); glVertex3f(-1,-1,-1); glVertex3f(-1,-1, 1); glVertex3f(-1, 1, 1); glVertex3f(-1, 1,-1);
-        glEnd();
-
-        glUseProgram(0);
-
-        // imgui overlay
-        ImGui::SetNextWindowPos(ImVec2(20, 20), ImGuiCond_FirstUseEver);
-        ImGui::SetNextWindowSize(ImVec2(300, 150), ImGuiCond_FirstUseEver);
         ImGui::Begin("Debug Info");
         ImGui::Text("FPS: %.1f", 1.0f / deltaTime);
-        ImGui::Text("Position: %.2f, %.2f, %.2f", cam.position[0], cam.position[1], cam.position[2]);
-        ImGui::Text("Mouse: %s (esc to toggle)", cursorCaptured ? "Captured" : "Free");
         ImGui::End();
 
         ImGui::Render();
