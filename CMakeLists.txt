@@ -1,4 +1,4 @@
-# Nova - a very streamlined build file
+# Nova - A halo inspired FPS
 # (c) 2025 Lunarwing Games
 #
 # Dependencies:
@@ -66,6 +66,8 @@ if(BUILD_WITH_STEAMWORKS)
     else()
         target_include_directories(nova PRIVATE "$ENV{HOME}/sdk/public")
     endif()
+else()
+    message(STATUS "Project is not being built with Steamworks support")
 endif()
 
 # Compile flags and definitions
@@ -183,7 +185,7 @@ if(WIN32)
         COMMAND ${CMAKE_COMMAND} -E copy_if_different
             "${CMAKE_SOURCE_DIR}/steam_appid.txt"
             $<TARGET_FILE_DIR:nova>
-        COMMENT "Copied core DLLs to output directory (GLFW, GLEW, OpenAL, steam_appid.txt)."
+        COMMENT "Copied core files to output directory"
     )
 
     if(BUILD_WITH_STEAMWORKS)
@@ -224,7 +226,7 @@ elseif(APPLE)
             "@loader_path/libglfw.3.4.dylib" $<TARGET_FILE:nova>
         COMMAND install_name_tool -change "@rpath/libopenal.1.dylib"
             "@loader_path/libopenal.1.24.3.dylib" $<TARGET_FILE:nova>
-        COMMENT "Rebinding dylib install names to @loader_path (macOS)."
+        COMMENT "Rebinding dylib install names to @loader_path."
     )
 endif()
 

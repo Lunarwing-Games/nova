@@ -1,7 +1,11 @@
 # Directories
 vendor/
 build/
+tmp/
+
+# Hidden directories
 .vscode/
+.cache/
 
 # Config / per-user files
 .DS_Store
